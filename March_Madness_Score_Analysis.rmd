@@ -1,0 +1,11 @@
+---
+title: "March Madness Final Score Squares"
+output: html_document
+---
+```{r setup, include=FALSE}
+library(tidyverse)
+```
+```{r load-data}
+df <- read.csv("Game_Results.csv")
+head(df)
+```

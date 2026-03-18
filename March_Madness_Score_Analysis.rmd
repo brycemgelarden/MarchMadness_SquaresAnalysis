@@ -1,11 +1,277 @@
 ---
-title: "March Madness Final Score Squares"
-output: html_document
+title: "March Madness Squares: A Historical Analysis (1985 - 2025)"
+author: "By: Bryce Gelarden"
+output: 
+    html_document:
+        toc: true
+        toc_float: true
+        theme: flatly
+        fig_caption: true
 ---
-```{r setup, include=FALSE}
+
+## Introduction:
+Every March, millions of Americans enter March Madness squares pools with nothing but hope --- and that's entirely by design.  Unlike challenges that are a race to formulate the perfect bracket, squares are assigned randomly, meaning there is **no strategy, no edge, and no skill** that can tip the odds in your favor.  You get what you get.  
+
+And while you have no say in which square you receive, you can know whether the square you've been handed has been a historical winner, or a longshot.
+
+This report analyzes every Men's NCAA Tournament final score from 1985 to 2025 (less 2020), identifying which final digit combinations have appeared most frequently and statistically exploring why certain squares are anything but a Cinderella Story.
+
+## The Data:
+
+### Source
+The dataset used for this analysis was found via KStreet13's public GitHub Repository, which is freely accessible and well-documented.  Sports reference data of this nature is increasingly easy to find in the public domain --- a testament to the growing culture of open-source data sharing.
+
+<small>**Sidenote on Data Collection:** This dataset was complied through **web scraping**, a technique used to programmatically extract data from websites.  Readers interested in the methodology behind web scraping can explore [KStreet13's repository](https://github.com/kstreet13/marchMadnessScores) directly, where the scraping engine is fully visible (under the 'code' folder) and well worth a look.</small>
+
+### Set-Up
+This analysis was conducted through the use of R scripts embedded into this markdown file you are currently reading, leveraging the `tidyverse` collection of packages for data manipulation and visualization.  The dataset was loaded directly from a local CSV file (mentioned above).
+
+```{r setup, message = FALSE, warning = FALSE}
 library(tidyverse)
+games <- read.csv("Game_Results.csv")
 ```
-```{r load-data}
-df <- read.csv("Game_Results.csv")
-head(df)
+
+### Structure
+To get a feel for this data, let's take a look at the structure examining both the first and last few rows of the dataset using `head()` and `tail()`.
+```{r structure, echo = FALSE}
+spacer <- data.frame(matrix("...", nrow = 3, ncol = ncol(games)))
+colnames(spacer) <- colnames(games)
+rbind(head(games, 3), spacer, tail(games, 3))
 ```
+
+One aspect of this dataset that greatly simplified the analysis is that the winning 
+team is consistently recorded under `Team1`, `Seed1`, and `Score1` --- meaning the 
+data was already structured in a winner-first format. This removed the need to 
+manually sort or identify winners, allowing the analysis to move forward both cleanly 
+and efficiently.
+
+That being said, let's cover what each column indicates:
+
+<small>
+`Seed1`, `Team1`, `Score1`: Winner's seed, school name, and final score <br>
+`Seed2`, `Team2`, `Score2`: Womp, womp, womp. <br>
+`Round`: Tournament round (64 --> Round 1, ... , 4 --> Final 4)<br>
+`Year`: Season year 
+</small>
+
+**Takeaway:** We have the final buzzer results of all **2,586 contests** played in the Men's NCAA Tournament since the field expanded to 64 teams in 1985.
+
+### At a Glance 
+
+Let's get our feet wet with a classic box-and-whisker plot, comparing winning team final scores, to their opponents (losing teams).
+
+```{r boxplots, echo=FALSE}
+games_long <- games %>%
+  select(Score1, Score2) %>%
+  rename(Winner = Score1, Loser = Score2) %>%
+  pivot_longer(cols = everything(), names_to = "Result", values_to = "Score")
+
+ggplot(games_long, aes(x = Result, y = Score, fill = Result)) +
+  geom_boxplot() +
+  scale_x_discrete(limits = c("Winner", "Loser")) +
+  labs(title = "Distribution of Winning vs. Losing Scores (1985 - 2025)",
+       x = "",
+       y = "Final Score") +
+  theme_minimal() +
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5))
+```
+<p style="font-size:0.85em; color:gray; text-align:center;">Fig. 1: Distribution of Winning vs. Losing Scores (1985 - 2025)</p>
+
+At a macro level, this makes perfect sense; winning teams score higher across the 
+board than their opponents. But, if you look carefully, we have an **edge case**.
+
+Turn your attention to the bottom of **Fig. 1** above and you will see two plotted points 
+at ~0 --- these are not missed free throws, but rather a 2021 First Round matchup 
+in which 10-seed VCU was forced to forfeit their contest against 7-seed Oregon due 
+to a COVID-related withdrawal. The game was ruled a **no contest** and recorded 
+as a 1-0 result in the dataset.
+
+As this was ruled a no contest and does not reflect a true game result, 
+this observation was removed prior to analysis. Shown below:
+
+`games <- games %>% filter(!(Score1 == 1 & Score2 == 0))`
+```{r remove-forfeit, echo=FALSE}
+games <- games %>% filter(!(Score1 == 1 & Score2 == 0))
+```
+<br>
+
+### Extracting the Last Digit
+
+In a squares pool, winners are determined by the **last digit** of each team's 
+final score --- not the score itself. To isolate this, we use the modulo operator 
+(`%%`), which returns the remainder after dividing by 10. 
+
+A final score of 83 becomes **3**, a final score of 76 becomes **6**, and so on.
+
+We'll add each team's digits as columns to the `games` dataframe with the code below:
+```{r extract-last-digits}
+games <- games %>%
+  mutate(Digit1 = Score1 %% 10, Digit2 = Score2 %% 10)
+```
+
+<br>
+And to carefully select 2 games, and see the digit columns in action, **read carefully below**:
+
+```{r pick-games, echo = FALSE}
+games %>% filter((Team1 == "Indiana" & Team2 == "Kentucky") |
+                   (Team2 == "Purdue" & Team1 == "Fairleigh Dickinson")) %>%
+  select(Team1, Score1, Team2, Score2, Digit1, Digit2, Year)
+```
+
+<br>
+Now that we know what we have, and got rid of a pesky edge case, *let's go dancing*...
+<br>
+
+## The Squares:
+
+### Frequency Table
+
+The code below creates an "invisible" frequency table --- this is the 
+**engine running quietly under the hood**. Each row represents a unique pairing 
+of the winning team's last digit (`Digit1`) and the losing team's last digit 
+(`Digit2`), alongside the number of times that exact combination has occurred. 
+
+While the table alone is difficult to digest at 100 rows, it lays the groundwork 
+for the visualization that follows --- where the patterns become immediately clear.
+<br>
+
+
+```{r frequency table}
+squares <- games %>%
+  count(Digit1, Digit2) %>%
+  complete(Digit1 = 0:9, Digit2 = 0:9, fill = list(n = 0))
+```
+
+### The Heatmap 
+
+With our digit combinations counted behind the scenes, we can now visualize all 100 possible 
+squares at once. Each cell represents a unique **(Winner, Loser)** digit pairing --- 
+the darker the red, the more often that square has appeared as a final score 
+combination in the Men's NCAA Tournament. 
+<br>
+<br>
+
+```{r heatmap, echo=FALSE}
+ggplot(squares, aes(x = factor(Digit1), y = factor(Digit2), fill = n)) +
+  geom_tile(color = "#f9f9f9e3") +
+  geom_text(aes(label = n, color = n > median(n)), fontface = "bold") +
+  scale_color_manual(values = c("TRUE" = "white", "FALSE" = "gray30"), 
+                     guide = "none") +
+  scale_fill_gradientn(colors = c("white", "#fff7bc", "#feb24c", "#e31a1c")) +
+  scale_x_discrete(position = "top") +
+  scale_y_discrete(limits = rev(as.character(0:9))) +
+  labs(
+    title = "Most Common March Madness Final Score Squares (1985 - 2025)",
+    x = "Winning Team Digit",
+    y = "Losing Team Digit",
+    fill = "Frequency"
+  ) +
+  theme_minimal()
+```
+<p style="font-size:0.85em; color:gray; text-align:left; padding-left:115px;">Fig. 2: Most Common March Madness Final Score Squares (1985 - 2025)</p>
+<br>
+The results are in --- and they are anything but random.
+
+The two hottest squares spanning across forty years of *The Big Dance* are **(2,0)** and **(4,1)**, 
+each appearing **45 times** across 2,585 games. Close behind sits **(2,8)** at **43**. If you are sitting on one of these squares, history is on your side.
+
+On the other end of the spectrum, **(7,7)** has appeared just **12 times** --- 
+the coldest square on the board. The bottom-right corner of the grid tells a 
+similar story, with **(9,9)** sitting at a bleak **15**. 
+If that is your square, may the odds be ever in your favor (or ask for a refund).
+
+<br>
+<br>
+
+
+## The Math Behind the Squares:
+
+The heatmap told us **what** --- but let's see if the math can explain **why**.
+
+**Remember**...
+
+*We are only working with 2,585 games in this section, not 2,586 --- VCU forgot to wear their masks on the plane back in 2021.*
+<br>
+
+### Where Do Scores Actually Land?
+
+Winners and losers aside, we should examine all final score digits to 
+pressure-test any standout trends.
+
+To do this, we combine all 5,170 final score digits --- winners and losers alike --- 
+into a single vector:
+
+```{r all-digits, echo=TRUE, results='hide'}
+all_digits <- c(games$Digit1, games$Digit2)
+```
+
+<br>
+
+From there, we can visualize the distribution:
+
+```{r digit-bar, echo=FALSE}
+ggplot(data.frame(digit = all_digits), aes(x = factor(digit))) +
+  coord_cartesian(ylim = c(400, 550)) +
+  geom_bar(fill = "steelblue", color = "white") +
+  labs(title = "Frequency of Final Score Digits (1985 - 2025)",
+       x = "Final Score Digit",
+       y = "Count") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+<p style="font-size:0.85em; color:gray; text-align:left; padding-left:200px;">Fig. 3: Frequency of Final Score Digits (1985 - 2025)</p>
+
+<br>
+
+The results are telling. Digits **3**, **5**, and **8** appear most frequently 
+across all final scores, while **6** and **7** lag noticeably behind. This is 
+not random --- it is a reflection of where basketball scores naturally live. 
+
+Teams routinely finish in the 60s, 70s, and 80s, but the last digit of those 
+scores is far from uniform. And when you combine two teams' digits into a single 
+square, these small differences compound --- the hot squares on the heatmap are 
+hot precisely because they sit at the intersection of the most frequently occurring 
+digits. The cold ones never stood a chance.
+
+
+
+<br>
+
+### What Scores Should We Expect?
+
+We begin by calculating the **expected final score** for both winning and losing 
+teams across all 2,584 games.
+
+
+
+
+
+<br>
+<br>
+
+
+
+$$E(\text{Winning Score}) = \frac{1}{n} \sum_{i=1}^{n} \text{Score1}_i$$
+
+```{r mean-score-winner, echo=FALSE}
+Exp_Winner <- (1 / 2585) * sum(games$Score1)
+Exp_Winner
+```
+
+$$E(\text{Losing Score}) = \frac{1}{n} \sum_{i=1}^{n} \text{Score2}_i$$
+
+```{r mean-score-loser, echo=FALSE}
+Exp_Loser <- (1 / 2585) * sum(games$Score2)
+Exp_Loser
+```
+
+
+
+The **Expected Value of the Margin** states that the average point difference 
+between winning and losing teams can be expressed as:
+
+$$E(\text{Margin}) = E(\text{Winning Score}) - E(\text{Losing Score})$$
+
+
+
+

@@ -1,6 +1,6 @@
 ---
-title: "March Madness Squares: A Historical Analysis (1985 - 2025)"
-author: "By: Bryce Gelarden"
+title: "March Madness Squares Are Not Random: A 40-Year Analysis"
+author: "Report By: Bryce Gelarden"
 output: 
     html_document:
         toc: true
@@ -9,19 +9,19 @@ output:
         fig_caption: true
 ---
 
-## Introduction:
+## Introduction
 Every March, millions of Americans enter March Madness squares pools with nothing but hope --- and that's entirely by design.  Unlike challenges that are a race to formulate the perfect bracket, squares are assigned randomly, meaning there is **no strategy, no edge, and no skill** that can tip the odds in your favor.  You get what you get.  
 
 And while you have no say in which square you receive, you can know whether the square you've been handed has been a historical winner, or a longshot.
 
 This report analyzes every Men's NCAA Tournament final score from 1985 to 2025 (less 2020), identifying which final digit combinations have appeared most frequently and statistically exploring why certain squares are anything but a Cinderella Story.
 
-## The Data:
+## The Data
 
 ### Source
 The dataset used for this analysis was found via KStreet13's public GitHub Repository, which is freely accessible and well-documented.  Sports reference data of this nature is increasingly easy to find in the public domain --- a testament to the growing culture of open-source data sharing.
 
-<small>**Sidenote on Data Collection:** This dataset was complied through **web scraping**, a technique used to programmatically extract data from websites.  Readers interested in the methodology behind web scraping can explore [KStreet13's repository](https://github.com/kstreet13/marchMadnessScores) directly, where the scraping engine is fully visible (under the 'code' folder) and well worth a look.</small>
+<small>**Sidenote on Data Collection:** This dataset was compiled through **web scraping**, a technique used to programmatically extract data from websites.  Readers interested in the methodology behind web scraping can explore [KStreet13's repository](https://github.com/kstreet13/marchMadnessScores) directly, where the scraping engine is fully visible (under the 'code' folder) and well worth a look.</small>
 
 ### Set-Up
 This analysis was conducted through the use of R scripts embedded into this markdown file you are currently reading, leveraging the `tidyverse` collection of packages for data manipulation and visualization.  The dataset was loaded directly from a local CSV file (mentioned above).
@@ -32,7 +32,7 @@ games <- read.csv("Game_Results.csv")
 ```
 
 ### Structure
-To get a feel for this data, let's take a look at the structure examining both the first and last few rows of the dataset using `head()` and `tail()`.
+To get a feel for this data, let's take a look at the structure examining both the first and last few rows of the dataset using `head()` and `tail()` functions.
 ```{r structure, echo = FALSE}
 spacer <- data.frame(matrix("...", nrow = 3, ncol = ncol(games)))
 colnames(spacer) <- colnames(games)
@@ -80,7 +80,7 @@ ggplot(games_long, aes(x = Result, y = Score, fill = Result)) +
 At a macro level, this makes perfect sense; winning teams score higher across the 
 board than their opponents. But, if you look carefully, we have an **edge case**.
 
-Turn your attention to the bottom of **Fig. 1** above and you will see two plotted points 
+Turn your attention to the bottom of *Fig. 1* above and you will see two plotted points 
 at ~0 --- these are not missed free throws, but rather a 2021 First Round matchup 
 in which 10-seed VCU was forced to forfeit their contest against 7-seed Oregon due 
 to a COVID-related withdrawal. The game was ruled a **no contest** and recorded 
@@ -122,7 +122,7 @@ games %>% filter((Team1 == "Indiana" & Team2 == "Kentucky") |
 Now that we know what we have, and got rid of a pesky edge case, *let's go dancing*...
 <br>
 
-## The Squares:
+## The Squares
 
 ### Frequency Table
 
@@ -131,7 +131,7 @@ The code below creates an "invisible" frequency table --- this is the
 of the winning team's last digit (`Digit1`) and the losing team's last digit 
 (`Digit2`), alongside the number of times that exact combination has occurred. 
 
-While the table alone is difficult to digest at 100 rows, it lays the groundwork 
+While the table alone is difficult to digest at 100 rows (not shown), it lays the groundwork 
 for the visualization that follows --- where the patterns become immediately clear.
 <br>
 
@@ -184,7 +184,7 @@ If that is your square, may the odds be ever in your favor (or ask for a refund)
 <br>
 
 
-## The Math Behind the Squares:
+## The Math Behind the Squares
 
 The heatmap told us **what** --- but let's see if the math can explain **why**.
 
@@ -193,63 +193,17 @@ The heatmap told us **what** --- but let's see if the math can explain **why**.
 *We are only working with 2,585 games in this section, not 2,586 --- VCU forgot to wear their masks on the plane back in 2021.*
 <br>
 
-### Where Do Scores Actually Land?
 
-Winners and losers aside, we should examine all final score digits to 
-pressure-test any standout trends.
-
-To do this, we combine all 5,170 final score digits --- winners and losers alike --- 
-into a single vector:
-
-```{r all-digits, echo=TRUE, results='hide'}
-all_digits <- c(games$Digit1, games$Digit2)
-```
-
-<br>
-
-From there, we can visualize the distribution:
-
-```{r digit-bar, echo=FALSE}
-ggplot(data.frame(digit = all_digits), aes(x = factor(digit))) +
-  coord_cartesian(ylim = c(400, 550)) +
-  geom_bar(fill = "steelblue", color = "white") +
-  labs(title = "Frequency of Final Score Digits (1985 - 2025)",
-       x = "Final Score Digit",
-       y = "Count") +
-  theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5))
-```
-<p style="font-size:0.85em; color:gray; text-align:left; padding-left:200px;">Fig. 3: Frequency of Final Score Digits (1985 - 2025)</p>
-
-<br>
-
-The results are telling. Digits **3**, **5**, and **8** appear most frequently 
-across all final scores, while **6** and **7** lag noticeably behind. This is 
-not random --- it is a reflection of where basketball scores naturally live. 
-
-Teams routinely finish in the 60s, 70s, and 80s, but the last digit of those 
-scores is far from uniform. And when you combine two teams' digits into a single 
-square, these small differences compound --- the hot squares on the heatmap are 
-hot precisely because they sit at the intersection of the most frequently occurring 
-digits. The cold ones never stood a chance.
-
-
-
-<br>
 
 ### What Scores Should We Expect?
 
 We begin by calculating the **expected final score** for both winning and losing 
-teams across all 2,584 games.
-
-
+teams across all 2,585 games.
 
 
 
 <br>
 <br>
-
-
 
 $$E(\text{Winning Score}) = \frac{1}{n} \sum_{i=1}^{n} \text{Score1}_i$$
 
@@ -272,6 +226,96 @@ between winning and losing teams can be expressed as:
 
 $$E(\text{Margin}) = E(\text{Winning Score}) - E(\text{Losing Score})$$
 
+```{r mean-margin, echo=FALSE}
+Exp_Margin = Exp_Winner - Exp_Loser
+Exp_Margin
+```
+
+This reveals that on average, we can expect the winning team of an NCAA Tournament 
+game to win by approximately **11.8 points**. Rounding to **12**, and returning to 
+*Fig. 2*, we notice that many of the hottest squares share a digit difference of **2** 
+between the winning and losing digit --- a direct reflection of that average margin 
+playing out in the final score.
 
 
 
+### Where Do Scores Actually Land?
+
+Although the expected value calculations can be labeled conclusive with well over 2,000 contests to measure, we can also standardize winning margins, because in a squares pool, only the second digit matters.
+Thus, we perform the same modulo operation (`Margin %% 10`).  
+
+Now, we standardize the margins of every game's final score: no matter if the margin was 10+, 20+, or even 30+, after all ...
+
+**The last digit of the scores is what we are measuring**
+
+<br>
+
+
+```{r margin-distribution, echo=FALSE}
+games <- games %>% mutate(Margin = (Score1 - Score2) %% 10)
+
+ggplot(games, aes(x = factor(Margin))) +
+  geom_bar(fill = "steelblue", color = "white") +
+  labs(title = "Distribution of Winning Margin Digits (1985 - 2025)",
+       x = "Margin Digit (Margin %% 10)",
+       y = "Count") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+<p style="font-size:0.85em; color:gray; text-align:left; padding-left:175px;">Fig. 3: Distribution of Winning Margins (1985 - 2025)</p>
+
+
+*Figure 3* drives the point home. The last digit of the winning margin --- not the 
+margin itself --- is what determines your square. Winning by 9 and winning by 19 
+are **identical** in a squares pool. Winning by 10, 20, or 30 all collapse into 
+the same **0** digit.
+
+With that in mind, the chart tells a clear story. Margin digits of **2** and **3** 
+are the most common, meaning the winning team's score most frequently ends **2 or 3 
+digits higher** than the loser's --- exactly what we see heating up the heatmap in 
+*Fig. 2*. Meanwhile, margin digit **0** is the least common --- blowouts divisible 
+by 10 are rare, and close games ending in exact multiples of 10 are rarer still.
+
+The math and the heatmap are telling the same story. Now you have the receipts.
+
+<br>
+
+### How Much Better is the Best?
+
+If we’ve concluded that some squares are ‘better’, to what degree is that so?
+
+To keep this simple, we’ll take `max_square / min_square` which finds the ratio between the most frequent square, and least.
+
+`[1] 3.75`
+
+The best square **(2,0)** has appeared nearly **4 times more often** than the worst square **(7,7)**.
+
+Holding a (2,0), you can expect to see your square hit roughly once every tournament. Holding a (7,7)? You might be waiting three to four years just to see it show up once *(just like IU fans)*.
+
+
+## Key Takeaways
+
+- **Squares are not random.** While your assignment is, the outcomes are not. 
+Forty years of data proves that certain digit combinations appear far more 
+frequently than others.
+
+- **Basketball scoring is the reason.** The nature of the game --- scores 
+clustering in the 60s-80s, margins typically between 5-20 points --- naturally 
+favors certain last digit combinations over others.
+
+- **Margins compound the effect.** Winning by 2 and winning by 12 produce the 
+same square. This means the distribution of margin digits, not raw margins, 
+is what truly drives the board --- and digits **2** and **3** dominate.
+
+- **The best square is nearly 4x better than the worst.** **(2,0)** has appeared 
+*3.75 times more often* than **(7,7)** across 2,585 games. That is not luck. 
+That is structure.
+
+- **You still can't choose your square.** But now you know exactly what you 
+are holding --- and that is more than everyone else at the table.
+
+
+---
+<p style="text-align:center; font-size:0.9em;">
+Full project code and data available on [GitHub](https://github.com/brycemgelarden/MarchMadness_SquaresAnalysis.git) 
+</p>

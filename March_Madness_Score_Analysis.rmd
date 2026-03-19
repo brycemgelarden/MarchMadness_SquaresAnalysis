@@ -1,6 +1,7 @@
 ---
 title: "March Madness Squares Are Not Random: A 40-Year Analysis"
 author: "Report By: Bryce Gelarden"
+date: "March 2026"
 output: 
     html_document:
         toc: true

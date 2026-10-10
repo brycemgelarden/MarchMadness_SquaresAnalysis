@@ -1,0 +1,12 @@
+---
+title: "March Madness Squares Are Not Random: A 40-Year Analysis"
+author: "Report By: Bryce M. Gelarden"
+date: "Fall 2026"
+output: 
+    html_document:
+        toc: true
+        toc_float: true
+        theme: flatly
+        fig_caption: true
+---
+

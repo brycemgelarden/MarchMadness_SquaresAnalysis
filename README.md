@@ -1,7 +1,8 @@
 https://brycegelarden.org/ResearchProjects/MarchMadness_2026/March_Madness_Score_Analysis_files/March_Madness_Score_Analysis.html
 
-**P1_March_Madness_Squares_Analysis**: Original Report, *March 2026*
+**PI_March_Madness_Squares_Analysis**: Original Report, *March 2026*
 
+**PII_March_Madness_Squares_Analysis**: Redraft w/ new methodologies and approach, Start: *November 2026*
 
 ## What this is:
 Analysis of NCAA Men's Basketball Tournament scores (1985 - 2025) to evaluate square outcomes distributions.
